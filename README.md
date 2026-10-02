@@ -844,10 +844,12 @@ graph LR
 
 ---
 
-## License
+## Flow
 
-IBM Internal — Proof of Concept
+<img width="1213" height="1297" alt="Terraform drift AI" src="https://github.com/user-attachments/assets/7ea4de9e-d4e7-42c5-9d65-587ec0e9de42" />
 
----
+## Slack notification
 
-*Made with ❤️ for IBM Cloud*
+<img width="1491" height="774" alt="Screenshot 2026-10-02 at 1 02 39 PM" src="https://github.com/user-attachments/assets/1c49b3b8-a325-4aca-bce3-08783abf955a" />
+
+
