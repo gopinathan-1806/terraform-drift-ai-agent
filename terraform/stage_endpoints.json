@@ -1,0 +1,42 @@
+{
+  "IBMCLOUD_IAM_API_ENDPOINT": {
+    "public": {
+      "us-south": "https://iam.test.cloud.ibm.com",
+      "us-east":  "https://iam.test.cloud.ibm.com",
+      "eu-gb":    "https://iam.test.cloud.ibm.com",
+      "eu-de":    "https://iam.test.cloud.ibm.com",
+      "au-syd":   "https://iam.test.cloud.ibm.com",
+      "jp-tok":   "https://iam.test.cloud.ibm.com"
+    }
+  },
+  "IBMCLOUD_RESOURCE_CONTROLLER_API_ENDPOINT": {
+    "public": {
+      "us-south": "https://resource-controller.test.cloud.ibm.com",
+      "us-east":  "https://resource-controller.test.cloud.ibm.com",
+      "eu-gb":    "https://resource-controller.test.cloud.ibm.com",
+      "eu-de":    "https://resource-controller.test.cloud.ibm.com",
+      "au-syd":   "https://resource-controller.test.cloud.ibm.com",
+      "jp-tok":   "https://resource-controller.test.cloud.ibm.com"
+    }
+  },
+  "IBMCLOUD_RESOURCE_MANAGEMENT_API_ENDPOINT": {
+    "public": {
+      "us-south": "https://resource-controller.test.cloud.ibm.com",
+      "us-east":  "https://resource-controller.test.cloud.ibm.com",
+      "eu-gb":    "https://resource-controller.test.cloud.ibm.com",
+      "eu-de":    "https://resource-controller.test.cloud.ibm.com",
+      "au-syd":   "https://resource-controller.test.cloud.ibm.com",
+      "jp-tok":   "https://resource-controller.test.cloud.ibm.com"
+    }
+  },
+  "IBMCLOUD_IS_NG_API_ENDPOINT": {
+    "public": {
+      "us-south": "https://us-south-stage01.iaasdev.cloud.ibm.com",
+      "us-east":  "https://us-east-stage01.iaasdev.cloud.ibm.com",
+      "eu-gb":    "https://eu-gb-stage01.iaasdev.cloud.ibm.com",
+      "eu-de":    "https://eu-de-stage01.iaasdev.cloud.ibm.com",
+      "au-syd":   "https://au-syd-stage01.iaasdev.cloud.ibm.com",
+      "jp-tok":   "https://jp-tok-stage01.iaasdev.cloud.ibm.com"
+    }
+  }
+}

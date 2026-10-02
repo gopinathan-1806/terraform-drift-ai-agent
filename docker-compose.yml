@@ -1,0 +1,60 @@
+# ============================================================
+# IBM Cloud Terraform DriftGuard AI — docker-compose.yml
+#
+# Local development convenience wrapper.
+#
+# Usage:
+#   cp .env.example .env   # fill in values
+#   docker-compose up
+#
+# The application runs on http://127.0.0.1:8080
+# ============================================================
+
+version: "3.9"
+
+services:
+  driftguard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: driftguard-ai
+    image: driftguard-ai:latest
+    restart: unless-stopped
+
+    # Port binding — 127.0.0.1 only (never 0.0.0.0)
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    # Environment — all secrets from .env file (never committed)
+    env_file:
+      - .env
+
+    # Override specific settings for Docker
+    environment:
+      - API_HOST=0.0.0.0  # Inside container, listen on all interfaces
+      - DRIFT_STATE_DIR=/app/.driftguard/state
+
+    # Persistent state for drift fingerprints
+    volumes:
+      - driftguard-state:/app/.driftguard/state
+      # Mount your Terraform working directory
+      # Uncomment and adjust path as needed:
+      # - ./terraform:/app/terraform:ro
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # Security: read-only root filesystem where possible
+    read_only: false  # Needs to write state files
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  driftguard-state:
+    driver: local

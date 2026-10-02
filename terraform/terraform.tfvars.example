@@ -1,0 +1,15 @@
+# IBM Cloud Terraform DriftGuard AI — Terraform variable overrides
+# Copy this file to terraform.tfvars and customize.
+# NEVER commit terraform.tfvars if it contains sensitive values.
+
+region         = "us-south"
+resource_group = "Default"
+prefix         = "driftguard-demo"
+allowed_cidr   = "10.0.0.0/16"
+zone           = "us-south-1"
+
+# ── IBM Cloud Stage account ──────────────────────────────────────────
+# API key: export TF_VAR_ibmcloud_api_key=your-key  (never put it in this file)
+
+# Stage uses private endpoints (test.cloud.ibm.com)
+ibmcloud_visibility = "private"

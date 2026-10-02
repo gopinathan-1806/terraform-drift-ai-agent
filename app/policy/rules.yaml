@@ -1,0 +1,322 @@
+# IBM Cloud Terraform DriftGuard AI — Policy Rules
+#
+# These rules are evaluated deterministically BEFORE the AI agent.
+# Each rule specifies:
+#   - id:          Unique rule identifier
+#   - severity:    CRITICAL | HIGH | MEDIUM | LOW | INFO
+#   - description: Human-readable description
+#   - match:       Matching criteria (evaluated in order, first match wins per rule set)
+#
+# Match fields (all optional, ANDed together):
+#   resource_types:     List of Terraform resource type prefixes to match
+#   actions:            Drift actions to match (create | update | delete | replace)
+#   attributes:         Attribute names to match (substring match supported)
+#   attribute_patterns: Regex patterns applied to attribute names
+#   value_patterns:     Regex patterns applied to the ACTUAL (after) value
+#   description_hint:   Human-readable note about why this rule fires
+
+rules:
+
+  # ──────────────────────────────────────────────────────────────────────
+  # CRITICAL
+  # ──────────────────────────────────────────────────────────────────────
+
+  - id: CRITICAL_SECURITY_GROUP_PUBLIC_SENSITIVE_PORTS
+    severity: CRITICAL
+    description: >
+      Security group rule now permits traffic from the public internet
+      (0.0.0.0/0 or ::/0) on a sensitive port (SSH, RDP, DB ports).
+    match:
+      resource_types:
+        - ibm_is_security_group_rule
+      actions:
+        - update
+        - create
+      attributes:
+        - remote
+      value_patterns:
+        - "^0\\.0\\.0\\.0/0$"
+        - "^::/0$"
+
+  - id: CRITICAL_IAM_PRIVILEGE_ESCALATION
+    severity: CRITICAL
+    description: >
+      IAM policy or role change that could grant elevated privileges.
+    match:
+      resource_types:
+        - ibm_iam_access_group_policy
+        - ibm_iam_user_policy
+        - ibm_iam_service_policy
+        - ibm_iam_authorization_policy
+      actions:
+        - create
+        - update
+        - delete
+        - replace
+
+  - id: CRITICAL_ENCRYPTION_DISABLED
+    severity: CRITICAL
+    description: >
+      Encryption has been disabled on a resource.
+    match:
+      resource_types:
+        - ibm_resource_instance
+        - ibm_cos_bucket
+        - ibm_is_volume
+      actions:
+        - update
+      attributes:
+        - encryption
+        - kms_key
+        - root_key_id
+
+  - id: CRITICAL_PRODUCTION_RESOURCE_DELETED
+    severity: CRITICAL
+    description: >
+      A resource tagged as production or matching production naming is being deleted.
+    match:
+      resource_types:
+        - ibm_is_instance
+        - ibm_is_vpc
+        - ibm_database
+        - ibm_resource_instance
+      actions:
+        - delete
+        - replace
+
+  - id: CRITICAL_LOGGING_DISABLED
+    severity: CRITICAL
+    description: >
+      Logging or audit trail has been disabled on a resource.
+    match:
+      resource_types:
+        - ibm_resource_instance
+        - ibm_is_flow_log_collector
+      actions:
+        - delete
+      attributes:
+        - active
+        - enabled
+
+  # ──────────────────────────────────────────────────────────────────────
+  # HIGH
+  # ──────────────────────────────────────────────────────────────────────
+
+  - id: HIGH_SECURITY_GROUP_RULE_ANY_CHANGE
+    severity: HIGH
+    description: >
+      Any change to a security group rule, including port or CIDR modifications.
+    match:
+      resource_types:
+        - ibm_is_security_group_rule
+        - ibm_is_security_group
+      actions:
+        - update
+        - create
+        - delete
+        - replace
+
+  - id: HIGH_NETWORK_ACL_CHANGE
+    severity: HIGH
+    description: >
+      Network ACL or subnet ACL configuration change detected.
+    match:
+      resource_types:
+        - ibm_is_network_acl
+        - ibm_is_network_acl_rule
+      actions:
+        - update
+        - create
+        - delete
+        - replace
+
+  - id: HIGH_IAM_ANY_CHANGE
+    severity: HIGH
+    description: >
+      Any IAM-related resource change.
+    match:
+      resource_types:
+        - ibm_iam_access_group
+        - ibm_iam_access_group_members
+        - ibm_iam_access_group_policy
+        - ibm_iam_user_policy
+        - ibm_iam_service_policy
+        - ibm_iam_authorization_policy
+        - ibm_iam_user_invite
+      actions:
+        - create
+        - update
+        - delete
+        - replace
+
+  - id: HIGH_FIREWALL_ROUTING_CHANGE
+    severity: HIGH
+    description: >
+      VPN gateway, routing table, or public gateway change.
+    match:
+      resource_types:
+        - ibm_is_vpn_gateway
+        - ibm_is_vpn_gateway_connection
+        - ibm_is_vpc_routing_table
+        - ibm_is_vpc_routing_table_route
+        - ibm_is_public_gateway
+      actions:
+        - create
+        - update
+        - delete
+        - replace
+
+  - id: HIGH_TLS_SECURITY_CHANGE
+    severity: HIGH
+    description: >
+      TLS profile or certificate configuration change.
+    match:
+      resource_types:
+        - ibm_is_lb_listener
+        - ibm_is_lb
+      actions:
+        - update
+      attributes:
+        - certificate_instance
+        - security_policy
+        - https_redirect
+
+  - id: HIGH_DATABASE_CONFIG_CHANGE
+    severity: HIGH
+    description: >
+      Production database configuration change (e.g. backup, scaling).
+    match:
+      resource_types:
+        - ibm_database
+      actions:
+        - update
+        - replace
+
+  # ──────────────────────────────────────────────────────────────────────
+  # MEDIUM
+  # ──────────────────────────────────────────────────────────────────────
+
+  - id: MEDIUM_INSTANCE_SIZE_CHANGE
+    severity: MEDIUM
+    description: >
+      Compute instance profile or size change.
+    match:
+      resource_types:
+        - ibm_is_instance
+      actions:
+        - update
+      attributes:
+        - profile
+        - memory
+        - vcpu_count
+
+  - id: MEDIUM_AUTOSCALING_CHANGE
+    severity: MEDIUM
+    description: >
+      Auto-scaling group configuration change.
+    match:
+      resource_types:
+        - ibm_is_instance_group
+        - ibm_is_instance_group_manager
+        - ibm_is_instance_group_manager_policy
+      actions:
+        - update
+        - create
+        - delete
+
+  - id: MEDIUM_LOAD_BALANCER_CONFIG
+    severity: MEDIUM
+    description: >
+      Load balancer pool or listener configuration change.
+    match:
+      resource_types:
+        - ibm_is_lb_pool
+        - ibm_is_lb_pool_member
+        - ibm_is_lb_listener
+      actions:
+        - update
+
+  - id: MEDIUM_STORAGE_SIZE_CHANGE
+    severity: MEDIUM
+    description: >
+      Block volume or object storage capacity change.
+    match:
+      resource_types:
+        - ibm_is_volume
+        - ibm_cos_bucket
+      actions:
+        - update
+      attributes:
+        - capacity
+        - size
+        - storage_class
+
+  # ──────────────────────────────────────────────────────────────────────
+  # LOW
+  # ──────────────────────────────────────────────────────────────────────
+
+  - id: LOW_TAG_CHANGE
+    severity: LOW
+    description: >
+      Tag or label change on any resource.
+    match:
+      resource_types: []   # applies to all resource types
+      actions:
+        - update
+      attributes:
+        - tags
+        - labels
+        - resource_tags
+
+  - id: LOW_DESCRIPTION_CHANGE
+    severity: LOW
+    description: >
+      Description or name metadata change.
+    match:
+      resource_types: []
+      actions:
+        - update
+      attributes:
+        - description
+        - comment
+        - notes
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Default fallback (applied when no other rule matches)
+  # ──────────────────────────────────────────────────────────────────────
+
+  - id: DEFAULT_REPLACE_HIGH
+    severity: HIGH
+    description: >
+      Any resource replacement is HIGH severity by default.
+    match:
+      resource_types: []
+      actions:
+        - replace
+
+  - id: DEFAULT_DELETE_HIGH
+    severity: HIGH
+    description: >
+      Any unexpected resource deletion is HIGH severity by default.
+    match:
+      resource_types: []
+      actions:
+        - delete
+
+  - id: DEFAULT_UPDATE_MEDIUM
+    severity: MEDIUM
+    description: >
+      Catch-all for resource updates not covered by a more specific rule.
+    match:
+      resource_types: []
+      actions:
+        - update
+
+  - id: DEFAULT_CREATE_LOW
+    severity: LOW
+    description: >
+      Catch-all for resource creations not covered by a more specific rule.
+    match:
+      resource_types: []
+      actions:
+        - create

@@ -1,0 +1,605 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IBM Cloud Terraform DriftGuard AI — End-to-End Flow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #f7f8fa;
+    color: #1f2328;
+    padding: 32px 24px 48px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2328;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 12px;
+    color: #57606a;
+    margin-bottom: 36px;
+  }
+
+  /* ── Row / column layout ─────────────────────────────────────── */
+  .diagram {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Layer label on the left */
+  .layer-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-bottom: 0;
+  }
+
+  .layer-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #ffffff;
+    border-radius: 6px 0 0 6px;
+    padding: 12px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+  }
+
+  .layer-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 16px 20px;
+    border-radius: 0 6px 6px 0;
+    position: relative;
+  }
+
+  /* Arrow connector between layers */
+  .arrow-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    position: relative;
+  }
+
+  .arrow-row svg {
+    display: block;
+  }
+
+  /* ── Layer colours ───────────────────────────────────────────── */
+  .layer-trigger   .layer-label { background: #4a6fa5; }
+  .layer-trigger   .layer-content { background: #eef2f9; border: 1.5px solid #c2d0e8; }
+
+  .layer-terraform .layer-label { background: #7c5cd8; }
+  .layer-terraform .layer-content { background: #f3f0fc; border: 1.5px solid #d5c9f5; }
+
+  .layer-parser    .layer-label { background: #2a7d4f; }
+  .layer-parser    .layer-content { background: #eaf5ee; border: 1.5px solid #b8dfc8; }
+
+  .layer-policy    .layer-label { background: #b5600a; }
+  .layer-policy    .layer-content { background: #fdf3e8; border: 1.5px solid #f2d4a8; }
+
+  .layer-ai        .layer-label { background: #c0392b; }
+  .layer-ai        .layer-content { background: #fdf0ee; border: 1.5px solid #f5c6c0; }
+
+  .layer-lifecycle .layer-label { background: #2e7d8c; }
+  .layer-lifecycle .layer-content { background: #e8f6f8; border: 1.5px solid #b0dce2; }
+
+  .layer-notify    .layer-label { background: #1a6e3a; }
+  .layer-notify    .layer-content { background: #e8f5ee; border: 1.5px solid #a8d8b8; }
+
+  /* ── Box cards ───────────────────────────────────────────────── */
+  .box {
+    background: #ffffff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 130px;
+    flex: 1;
+    position: relative;
+  }
+
+  .box-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1f2328;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .box-sub {
+    font-size: 10px;
+    color: #57606a;
+    line-height: 1.5;
+  }
+
+  .box-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .badge-critical { background: #fde8e6; color: #c0392b; }
+  .badge-high     { background: #fdf3e8; color: #b5600a; }
+  .badge-safe     { background: #e8f5ee; color: #1a6e3a; }
+  .badge-ai       { background: #f3f0fc; color: #7c5cd8; }
+
+  /* In-row arrows between boxes */
+  .inline-arrow {
+    font-size: 18px;
+    color: #9ca3af;
+    padding: 0 6px;
+    flex-shrink: 0;
+    align-self: center;
+  }
+
+  /* ── Lifecycle status badges row ─────────────────────────────── */
+  .status-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1.5px solid;
+  }
+
+  .status-new      { background: #fff3cd; color: #856404; border-color: #ffc107; }
+  .status-active   { background: #cfe2ff; color: #084298; border-color: #6ea8fe; }
+  .status-changed  { background: #fff3cd; color: #664d03; border-color: #ffda6a; }
+  .status-resolved { background: #d1e7dd; color: #0a3622; border-color: #75b798; }
+
+  /* ── Slack preview ───────────────────────────────────────────── */
+  .slack-preview {
+    background: #1d1c1d;
+    border-radius: 8px;
+    padding: 12px 16px;
+    flex: 1;
+    color: #d1d2d3;
+    font-size: 10px;
+    line-height: 1.7;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+
+  .slack-header {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+
+  .slack-field { color: #d1d2d3; }
+  .slack-code  { color: #4af626; font-family: monospace; }
+  .slack-crit  { color: #ff6b6b; font-weight: 700; }
+  .slack-ok    { color: #4af626; font-weight: 700; }
+
+  /* ── Guard rail note ─────────────────────────────────────────── */
+  .guardrail {
+    background: #fff8e1;
+    border: 1.5px solid #ffc107;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 10px;
+    color: #5d4a00;
+    margin-top: 6px;
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .guardrail-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Legend ──────────────────────────────────────────────────── */
+  .legend {
+    max-width: 960px;
+    margin: 28px auto 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    padding: 16px 20px;
+    background: #ffffff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+  }
+
+  .legend-title {
+    width: 100%;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1f2328;
+    margin-bottom: 4px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10.5px;
+    color: #57606a;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── Footer ──────────────────────────────────────────────────── */
+  footer {
+    text-align: center;
+    font-size: 11px;
+    color: #57606a;
+    margin-top: 36px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+  }
+</style>
+</head>
+<body>
+
+<h1>IBM Cloud Terraform DriftGuard AI</h1>
+<p class="subtitle">End-to-End Drift Detection Pipeline  ·  Read-only  ·  Auto-polling every 10 s</p>
+
+<div class="diagram">
+
+  
+  
+  
+  <div class="layer-row layer-trigger">
+    <div class="layer-label">Trigger</div>
+    <div class="layer-content" style="gap:12px">
+
+      <div class="box" style="max-width:200px;flex:none">
+        <div class="box-title">⏱ APScheduler
+          <span class="box-badge badge-safe">every 10 s</span>
+        </div>
+        <div class="box-sub">Fires automatically.<br />max_instances=1 prevents overlapping runs.</div>
+      </div>
+
+      <div class="inline-arrow">or</div>
+
+      <div class="box" style="max-width:220px;flex:none">
+        <div class="box-title">🌐 FastAPI API</div>
+        <div class="box-sub">
+          <span class="slack-code" style="font-size:9px;color:#3b82d4">POST /api/drift/check</span><br />
+          Manual on-demand trigger via REST.
+        </div>
+      </div>
+
+      <div class="inline-arrow">→</div>
+
+      <div class="box">
+        <div class="box-title">🔍 DriftDetector.run()</div>
+        <div class="box-sub">Pipeline orchestrator.<br />Coordinates all 6 stages below.</div>
+      </div>
+
+    </div>
+  </div>
+
+  
+  <div class="arrow-row">
+    <svg width="40" height="36">
+      <line x1="20" y1="0" x2="20" y2="26" stroke="#9ca3af" stroke-width="2"></line>
+      <polygon points="12,22 20,36 28,22" fill="#9ca3af"></polygon>
+    </svg>
+  </div>
+
+  
+  
+  
+  <div class="layer-row layer-terraform">
+    <div class="layer-label">Terraform</div>
+    <div class="layer-content" style="gap:0;flex-direction:column">
+
+      <div style="display:flex;gap:0;align-items:center;width:100%">
+        <div class="box" style="flex:none;min-width:150px">
+          <div class="box-title">📦 TerraformRunner</div>
+          <div class="box-sub">Command allowlist enforced.<br /><strong>apply / destroy blocked.</strong></div>
+        </div>
+        <div class="inline-arrow">→</div>
+        <div class="box" style="flex:none;min-width:190px">
+          <div class="box-title">1. <code style="font-size:10px">terraform init</code></div>
+          <div class="box-sub">Initialises provider plugins.<br />IBM Cloud provider v2.6.2.</div>
+        </div>
+        <div class="inline-arrow">→</div>
+        <div class="box" style="flex:none;min-width:190px">
+          <div class="box-title">2. <code style="font-size:10px">terraform validate</code></div>
+          <div class="box-sub">Checks configuration syntax<br />before hitting IBM Cloud APIs.</div>
+        </div>
+        <div class="inline-arrow">→</div>
+        <div class="box">
+          <div class="box-title">3. <code style="font-size:10px">plan -refresh-only</code>
+            <span class="box-badge badge-safe">read-only</span>
+          </div>
+          <div class="box-sub">Refreshes remote state vs IBM Cloud.<br />Saves plan to temp file. <strong>Never applies.</strong></div>
+        </div>
+        <div class="inline-arrow">→</div>
+        <div class="box" style="flex:none;min-width:160px">
+          <div class="box-title">4. <code style="font-size:10px">show -json</code></div>
+          <div class="box-sub">Converts plan to structured JSON for parsing.</div>
+        </div>
+      </div>
+
+      <div class="guardrail" style="margin-top:10px">
+        <span class="guardrail-icon">🔒</span>
+        <span>7 IBM Cloud Stage endpoint env vars injected at subprocess level: <strong>IBMCLOUD_IAM_API_ENDPOINT, IBMCLOUD_IS_NG_API_ENDPOINT, IBMCLOUD_GT_API_ENDPOINT</strong> and 4 others — routes all Terraform API calls to <strong>test.cloud.ibm.com</strong> instead of production.</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arrow-row">
+    <svg width="40" height="36">
+      <line x1="20" y1="0" x2="20" y2="26" stroke="#9ca3af" stroke-width="2"></line>
+      <polygon points="12,22 20,36 28,22" fill="#9ca3af"></polygon>
+    </svg>
+  </div>
+
+  
+  
+  
+  <div class="layer-row layer-parser">
+    <div class="layer-label">Parse</div>
+    <div class="layer-content" style="gap:12px">
+
+      <div class="box" style="flex:none;min-width:170px">
+        <div class="box-title">📄 TerraformParser</div>
+        <div class="box-sub">Reads <strong>resource_drift</strong> (refresh-only)<br />+ resource_changes (normal plan).</div>
+      </div>
+      <div class="inline-arrow">→</div>
+      <div class="box" style="flex:none;min-width:180px">
+        <div class="box-title">🔎 Attribute Diff</div>
+        <div class="box-sub">before vs after per attribute.<br />Sensitive values masked.<br />Unknown/computed skipped.</div>
+      </div>
+      <div class="inline-arrow">→</div>
+      <div class="box">
+        <div class="box-title">📦 DriftedResource models</div>
+        <div class="box-sub">
+          Normalised Pydantic objects.<br />
+          Each holds list of <strong>AttributeChange</strong>.<br />
+          Example: <span style="font-family:monospace;font-size:9.5px;color:#2a7d4f">remote: 10.0.0.0/16 → 172.0.2.8</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arrow-row">
+    <svg width="40" height="36">
+      <line x1="20" y1="0" x2="20" y2="26" stroke="#9ca3af" stroke-width="2"></line>
+      <polygon points="12,22 20,36 28,22" fill="#9ca3af"></polygon>
+    </svg>
+  </div>
+
+  
+  
+  
+  <div class="layer-row layer-policy">
+    <div class="layer-label">Policy</div>
+    <div class="layer-content" style="gap:12px">
+
+      <div class="box" style="flex:none;min-width:160px">
+        <div class="box-title">📋 PolicyEngine</div>
+        <div class="box-sub">Reads <strong>rules.yaml</strong> (21 rules).<br />100% deterministic.<br />No LLM involved.</div>
+      </div>
+      <div class="inline-arrow">→</div>
+      <div class="box" style="flex:none;min-width:180px">
+        <div class="box-title">⚖️ First-Match Wins</div>
+        <div class="box-sub">
+          Rules ordered: CRITICAL → HIGH<br />→ MEDIUM → LOW → INFO.<br />
+          Matches on type, action, attribute,<br />value regex.
+        </div>
+      </div>
+      <div class="inline-arrow">→</div>
+      <div class="box">
+        <div class="box-title">🏷 Severity Assigned</div>
+        <div class="box-sub" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <span class="box-badge badge-critical" style="font-size:9px;padding:2px 8px">🔴 CRITICAL</span>
+          <span class="box-badge badge-high" style="font-size:9px;padding:2px 8px">🟠 HIGH</span>
+          <span style="font-size:9px;background:#f0f4ff;color:#1a4f9e;font-weight:700;padding:2px 8px;border-radius:10px">🟡 MEDIUM</span>
+          <span class="box-badge badge-safe" style="font-size:9px;padding:2px 8px">🟢 LOW</span>
+          <span style="font-size:9px;background:#f5f5f5;color:#57606a;font-weight:700;padding:2px 8px;border-radius:10px">⚪ INFO</span>
+        </div>
+        <div class="box-sub" style="margin-top:6px">e.g. SG rule → 0.0.0.0/0 = <strong style="color:#c0392b">CRITICAL</strong></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arrow-row">
+    <svg width="40" height="36">
+      <line x1="20" y1="0" x2="20" y2="26" stroke="#9ca3af" stroke-width="2"></line>
+      <polygon points="12,22 20,36 28,22" fill="#9ca3af"></polygon>
+    </svg>
+  </div>
+
+  
+  
+  
+  <div class="layer-row layer-ai">
+    <div class="layer-label">AI Agent</div>
+    <div class="layer-content" style="gap:12px">
+
+      <div class="box" style="flex:none;min-width:165px">
+        <div class="box-title">🤖 DriftAnalysisAgent</div>
+        <div class="box-sub">
+          Provider: <strong>OpenAI gpt-4o-mini</strong><br />
+          Fallback if AI unavailable.<br />
+          Drift event never lost on AI failure.
+        </div>
+      </div>
+      <div class="inline-arrow">→</div>
+      <div class="box" style="flex:none;min-width:190px">
+        <div class="box-title">📝 Prompt Builder</div>
+        <div class="box-sub">
+          Structured JSON prompt.<br />
+          Sensitive keys masked.<br />
+          Max 8000 chars enforced.<br />
+          Guardrails: no exec, no credentials.
+        </div>
+      </div>
+      <div class="inline-arrow">→</div>
+      <div class="box">
+        <div class="box-title">💡 AI Response
+          <span class="box-badge badge-ai">JSON only</span>
+        </div>
+        <div class="box-sub">
+          <strong>summary</strong> · <strong>risk_level</strong> · <strong>impact</strong><br />
+          <strong>likely_reason</strong> · <strong>recommended_action</strong><br />
+          Validated — all 6 keys required.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arrow-row">
+    <svg width="40" height="36">
+      <line x1="20" y1="0" x2="20" y2="26" stroke="#9ca3af" stroke-width="2"></line>
+      <polygon points="12,22 20,36 28,22" fill="#9ca3af"></polygon>
+    </svg>
+  </div>
+
+  
+  
+  
+  <div class="layer-row layer-lifecycle">
+    <div class="layer-label">Lifecycle</div>
+    <div class="layer-content" style="gap:12px;flex-direction:column">
+
+      <div style="display:flex;gap:12px;align-items:center;width:100%">
+        <div class="box" style="flex:none;min-width:175px">
+          <div class="box-title">🔑 SHA-256 Fingerprint</div>
+          <div class="box-sub">
+            Key = address + attribute<br />
+            + expected + actual.<br />
+            Value change → new fingerprint.
+          </div>
+        </div>
+        <div class="inline-arrow">→</div>
+        <div class="box" style="flex:none;min-width:170px">
+          <div class="box-title">💾 LocalDriftStore</div>
+          <div class="box-sub">
+            JSON files per event.<br />
+            Path: <span style="font-family:monospace;font-size:9px">.driftguard/state/</span><br />
+            Persists across restarts.
+          </div>
+        </div>
+        <div class="inline-arrow">→</div>
+        <div class="box">
+          <div class="box-title">🔄 Status Transitions</div>
+          <div class="status-row" style="margin-top:6px">
+            <span class="status-badge status-new">NEW 🚨 notify</span>
+            <span style="color:#9ca3af;font-size:11px">→</span>
+            <span class="status-badge status-active">ACTIVE silent</span>
+            <span style="color:#9ca3af;font-size:11px">→</span>
+            <span class="status-badge status-changed">CHANGED ⚠️ notify</span>
+            <span style="color:#9ca3af;font-size:11px">→</span>
+            <span class="status-badge status-resolved">RESOLVED ✅ notify</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="arrow-row">
+    <svg width="40" height="36">
+      <line x1="20" y1="0" x2="20" y2="26" stroke="#9ca3af" stroke-width="2"></line>
+      <polygon points="12,22 20,36 28,22" fill="#9ca3af"></polygon>
+    </svg>
+  </div>
+
+  
+  
+  
+  <div class="layer-row layer-notify">
+    <div class="layer-label">Notify</div>
+    <div class="layer-content" style="gap:12px">
+
+      <div class="box" style="flex:none;min-width:165px">
+        <div class="box-title">📣 SlackNotifier</div>
+        <div class="box-sub">
+          Incoming Webhook API.<br />
+          Block Kit rich format.<br />
+          Webhook URL never logged.<br />
+          Sensitive values masked.
+        </div>
+      </div>
+      <div class="inline-arrow">→</div>
+      <div class="slack-preview">
+        <div class="slack-header">IBM Cloud Terraform DriftGuard AI</div>
+        <div><span class="slack-crit">🚨 NEW DRIFT</span> — IBM Cloud Infrastructure</div>
+        <div style="margin-top:6px">
+          <span class="slack-field">Environment:</span> <span class="slack-code">stage</span>  
+          <span class="slack-field">Resource:</span> <span class="slack-code">ibm_is_security_group_rule.app_https</span>
+        </div>
+        <div style="margin-top:4px">
+          <span class="slack-field">Changed Attributes:</span><br />
+           • <span class="slack-code">remote</span>: <span style="color:#ff6b6b">10.0.0.0/16</span> → <span style="color:#ff6b6b">172.0.2.8</span>
+        </div>
+        <div style="margin-top:4px">
+          <span class="slack-field">Policy Risk:</span> <span class="slack-crit">🔴 CRITICAL</span>  
+          <span class="slack-field">AI Assessment:</span> <span style="color:#ffa94d">HIGH</span>
+        </div>
+        <div style="margin-top:4px">
+          <span class="slack-field">AI Summary:</span> <span style="color:#adb5bd;font-size:9.5px">Security group inbound rule remote CIDR changed from private to public range — potential exposure.</span>
+        </div>
+        <div style="margin-top:4px;color:#6c757d;font-size:9px">Detected: 2026-10-02 10:35:30 UTC  |  Fingerprint: e417590d09f3...</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+
+
+
+<div class="legend">
+  <div class="legend-title">Layer Guide</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4a6fa5"></div> Trigger — APScheduler (10 s) or REST API</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7c5cd8"></div> Terraform — init → validate → plan -refresh-only → show -json</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2a7d4f"></div> Parse — resource_drift + resource_changes → AttributeChange models</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#b5600a"></div> Policy — 21 YAML rules, deterministic, CRITICAL→INFO severity</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div> AI Agent — OpenAI gpt-4o-mini, guardrails, JSON-only response</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2e7d8c"></div> Lifecycle — SHA-256 dedup, NEW → ACTIVE → CHANGED → RESOLVED</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1a6e3a"></div> Notify — Slack Block Kit, no duplicate alerts for unchanged drift</div>
+</div>
+
+<footer>Made with IBM Bob</footer>
+
+</body>
+</html>
